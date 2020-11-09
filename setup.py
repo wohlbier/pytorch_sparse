@@ -32,6 +32,10 @@ def get_extensions():
     extra_compile_args = {'cxx': []}
     extra_link_args = []
 
+    extra_compile_args['cxx'] = ['-flto', '-fPIC']
+    extra_link_args = ['-fuse-ld=lld', '-Wl,--plugin-opt=emit-llvm',
+                       '-Wl,--plugin-opt=save-temps']
+
     info = parallel_info()
     if 'parallel backend: OpenMP' in info and 'OpenMP not found' not in info:
         extra_compile_args['cxx'] += ['-DAT_PARALLEL_OPENMP']
