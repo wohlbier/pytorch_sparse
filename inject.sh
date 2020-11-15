@@ -7,7 +7,7 @@
 # ./inject.sh
 # python setup.py install
 
-PWD=/home/jgwohlbier/DSSoC/DASH/pytorch_build/pytorch_sparse
+PWD=/DATA/SDH/jgwohlbier/DSSoC/DASH/pytorch_build/pytorch_sparse
 P=./build/lib.linux-x86_64-3.7/torch_sparse
 FILES="_convert.so
        _diag.so
@@ -20,10 +20,10 @@ FILES="_convert.so
        _spspmm.so
        _version.so"
 
-OPT="/DATA/SDH/packages/spack/opt/spack/linux-ubuntu18.04-broadwell/clang-9.0.1/llvm-9.0.1-mupwetisd3upwdfojfn6ztdmxmgfy3kz/bin/opt -load /home/jgwohlbier/DSSoC/DASH/TraceAtlas/build/lib/AtlasPasses.so"
+OPT="/DATA/SDH/packages/spack/opt/spack/linux-ubuntu18.04-broadwell/clang-9.0.1/llvm-9.0.1-mupwetisd3upwdfojfn6ztdmxmgfy3kz/bin/opt -load /DATA/SDH/jgwohlbier/DSSoC/DASH/TraceAtlas/build/lib/AtlasPasses.so"
 COMP="/DATA/SDH/packages/spack/opt/spack/linux-ubuntu18.04-broadwell/clang-9.0.1/llvm-9.0.1-mupwetisd3upwdfojfn6ztdmxmgfy3kz/bin/clang++ -O2 -g -DNDEBUG -pthread -shared -B /DATA/SDH/packages/anaconda3/envs/dash_gs_env/compiler_compat -fuse-ld=lld -fPIC"
 LINK="-L/DATA/SDH/packages/anaconda3/envs/dash_gs_env/lib -Wl,-rpath=/DATA/SDH/packages/anaconda3/envs/dash_gs_env/lib -Wl,--no-as-needed -Wl,--sysroot=/ -L/DATA/SDH/packages/anaconda3/envs/dash_gs_env/lib/python3.7/site-packages/torch/lib -lc10 -ltorch -ltorch_cpu -ltorch_python"
-LINK="${LINK} -L/home/jgwohlbier/DSSoC/DASH/TraceAtlas/build/lib  -Wl,-rpath,/home/jgwohlbier/DSSoC/DASH/TraceAtlas/build/lib -lAtlasBackend -lz"
+LINK="${LINK} -L/DATA/SDH/jgwohlbier/DSSoC/DASH/TraceAtlas/build/lib -Wl,-rpath,/DATA/SDH/jgwohlbier/DSSoC/DASH/TraceAtlas/build/lib -lAtlasBackend -lz"
 
 TAI=0
 TAVI=0
@@ -57,19 +57,22 @@ for f in ${FILES}; do
     eval ${cmd}
 done
 
-# link bitcode
+# link bitcode from first pass to give to cartographer
 linkfiles=""
 for f in ${FILES}; do
     linkfiles="$linkfiles ${P}/${f}.ea.bc"
 done
 echo ""
 echo "Link the bitcode for cartographer"
-cmd="llvm-link ${linkfiles} -o ${P}/ptc.bc"
+cmd="llvm-link ${linkfiles} -o ${P}/pts.bc"
 echo "${cmd}"
 eval ${cmd}
 
+# add _sample.so.ea.bc since the block ID's were getting dropped.
 echo ""
 echo "Run test:"
 echo "python setup.py test --addopts test/test_spspmm.py"
 echo "Cartographer command:"
-echo "/home/jgwohlbier/DSSoC/DASH/TraceAtlas/build/bin/cartographer -v 6 -i raw.trc -b ${PWD}/${P}/ptc.bc -k kernel.json --pf"
+echo "/DATA/SDH/jgwohlbier/DSSoC/DASH/TraceAtlas/build/bin/cartographer -b ${PWD}/${P}/pts.bc -b ${PWD}/${P}/_sample.so.ea.bc -i raw.trc -k kernel.json --nb --pf -v  6"
+echo "dagExtractor command:"
+echo "/DATA/SDH/jgwohlbier/DSSoC/DASH/TraceAtlas/build/bin/dagExtractor -k kernel.json --nb -o dag.json -t raw.trace -v 6"
